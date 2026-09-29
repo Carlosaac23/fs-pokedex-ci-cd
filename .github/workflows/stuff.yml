@@ -1,0 +1,24 @@
+name: Testing stuff
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  a_test_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Github context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }} 
+        run: echo "$GITHUB_CONTEXT"
+      - name: commits
+        env:
+          GITHUB_COMMITS: ${{ toJSON(github.event.commits) }}
+        run: echo "$GITHUB_COMMITS"
+      - name: commit message
+        env:
+          GITHUB_COMMIT_MESSAGES: ${{ toJSON(github.event.commits.*.message) }}
+        run: echo "$GITHUB_COMMIT_MESSAGES"
