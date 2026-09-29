@@ -7,10 +7,9 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize]
-    
 
 jobs:
-  deployment_pipeline:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -21,35 +20,25 @@ jobs:
         run: npm install
       - name: Check style
         run: npm run eslint
-      - name: Run npm test 
+      - name: Run tests
         run: npm run test
-      - name: Run npm build
+      - name: Build application
         run: npm run build
+
+  deploy:
+    needs: [build_and_test]
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger deployment
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
-        run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
-      - name: Notify error in Discord
-        if: failure()
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          status: Failure
-          title: "❌ Build Failed!"
-          description: |
-            **Failure Details**
+        run: curl --fail ${{ secrets.RENDER_DEPLOY_HOOK }}
 
-            **Repository:** ${{ github.repository }}
-            **Branch:** ${{ github.ref_name }}
-            **Commit:** ${{ github.sha }}
-            **Message:** ${{ github.event.head_commit.message }}
-            **Author:** ${{ github.actor }}
-            **Workflow:** ${{ github.workflow }}
-            **Job:** ${{ github.job }}
-
-            **View Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          nodetail: true
+  notify_success:
+    needs: [deploy]
+    if: ${{ needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Notify success in Discord
-        if: success()
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
@@ -60,15 +49,42 @@ jobs:
 
             **Commit:** ${{ github.sha }}
             **Message:** ${{ github.event.head_commit.message }}
-            **Author:** ${{ github.actor }}
+            **Author:** ${{ github.event.head_commit.author.name }}
           nodetail: true
+
+  notify_failure:
+    needs: [build_and_test, deploy]
+    if: ${{ failure() && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify failure in Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: Failure
+          title: "❌ Build or deployment failed!"
+          description: |
+            **Failure Details**
+
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            **Message:** ${{ github.event.head_commit.message }}
+            **Author:** ${{ github.event.head_commit.author.name }}
+            **Workflow:** ${{ github.workflow }}
+            **Failed job(s):** build_and_test=${{ needs.build_and_test.result }}, deploy=${{ needs.deploy.result }}
+
+            **View Commit:** ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+            **View Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          nodetail: true
+
   tag_release:
-    needs: [deployment_pipeline]
+    needs: [deploy]
+    if: ${{ needs.deploy.result == 'success' && github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Bump version and push tag
-        if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
