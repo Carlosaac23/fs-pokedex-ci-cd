@@ -12,6 +12,6 @@ jobs:
       - name: Check deployed application
         uses: Jtalk/url-health-check-action@v5
         with:
-          url: https://fs-pokedex-ci-cd-l0fl.onrender.com/hola
+          url: https://fs-pokedex-ci-cd-l0fl.onrender.com
           max-attempts: 3
           retry-delay: 5s
