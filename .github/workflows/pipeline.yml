@@ -10,7 +10,7 @@ on:
     
 
 jobs:
-  simple_deployment_pipeline:
+  deployment_pipeline:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -28,8 +28,21 @@ jobs:
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - name: Notify error in Discord
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: Failure
+          title: "❌ Build Failed!"
+          description: "The pipeline encountered an error."
+      - name: Notify success in Discord
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
   tag_release:
-    needs: [simple_deployment_pipeline]
+    needs: [deployment_pipeline]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
