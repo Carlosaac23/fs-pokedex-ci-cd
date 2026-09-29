@@ -41,6 +41,10 @@ jobs:
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: Success
+          title: "✅ Deployment Successful!"
+          description: "A new version was successfully deployed to production."
+          nodetail: true
   tag_release:
     needs: [deployment_pipeline]
     runs-on: ubuntu-latest
