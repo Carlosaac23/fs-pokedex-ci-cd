@@ -43,8 +43,12 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: Success
           title: "✅ Deployment Successful!"
-          description: "A new version was successfully deployed to production."
-          nodetail: true
+          description: |
+            Deployment Details
+
+            **Commit:** `${{ github.sha }}`
+            **Message:** `${{ github.event.head_commit.message }}`
+            **Author:** `${{ github.actor }}`
   tag_release:
     needs: [deployment_pipeline]
     runs-on: ubuntu-latest
