@@ -46,9 +46,9 @@ jobs:
           description: |
             Deployment Details
 
-            **Commit:** `${{ github.sha }}`
-            **Message:** `${{ github.event.head_commit.message }}`
-            **Author:** `${{ github.actor }}`
+            **Commit:** ${{ github.sha }}
+            **Message:** ${{ github.event.head_commit.message }}
+            **Author:** ${{ github.actor }}
           nodetail: true
   tag_release:
     needs: [deployment_pipeline]
